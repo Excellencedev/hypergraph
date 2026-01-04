@@ -35,6 +35,7 @@ export type RegionPortAssignment = {
 export type SolvedRoute = {
   path: Candidate[]
   connection: Connection
+  requiredRip: boolean
 }
 
 export type Candidate<
@@ -50,7 +51,7 @@ export type Candidate<
   lastPort?: RegionPortType
   lastRegion?: RegionType
   nextRegion?: RegionType
-  ripsRequired: number
+  ripRequired: boolean
 }
 
 export type HyperGraph = {

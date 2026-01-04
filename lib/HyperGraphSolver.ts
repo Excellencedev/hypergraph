@@ -51,8 +51,6 @@ export class HyperGraphSolver<
       greedyMultiplier?: number
       rippingEnabled?: boolean
       ripCost?: number
-      maxRips?: number
-      randomRipFraction?: number
     },
   ) {
     super()
@@ -119,7 +117,8 @@ export class HyperGraphSolver<
         candidate.lastRegion!,
         candidate.lastPort!,
         candidate.port,
-      )
+      ) +
+      (candidate.ripRequired ? this.ripCost : 0)
     )
   }
 
@@ -139,7 +138,7 @@ export class HyperGraphSolver<
     const nextCandidatesByRegion: Record<RegionId, Candidate[]> = {}
     for (const port of currentRegion.ports) {
       if (port === currentCandidate.port) continue
-      const requiresRip =
+      const ripRequired =
         port.assignment &&
         port.assignment.connection.mutuallyConnectedNetworkId !==
           this.currentConnection!.mutuallyConnectedNetworkId
@@ -151,10 +150,10 @@ export class HyperGraphSolver<
         nextRegion:
           port.region1 === currentRegion ? port.region2 : port.region1,
         lastPort: currentPort,
-        ripsRequired: currentCandidate.ripsRequired + (requiresRip ? 1 : 0),
+        ripRequired,
       }
 
-      if (!this.rippingEnabled && newCandidate.ripsRequired! > 0) {
+      if (!this.rippingEnabled && newCandidate.ripRequired! > 0) {
         continue
       }
 
@@ -179,13 +178,14 @@ export class HyperGraphSolver<
         nextCandidate.g + nextCandidate.h * this.greedyMultiplier
     }
 
-    return nextCandidates
+    return nextCandidates as CandidateType[]
   }
 
   processSolvedRoute(finalCandidate: CandidateType) {
     const solvedRoute: SolvedRoute = {
       path: [],
       connection: this.currentConnection!,
+      requiredRip: false,
     }
 
     let cursorCandidate = finalCandidate
@@ -195,7 +195,8 @@ export class HyperGraphSolver<
     }
 
     // Rip any routes that are connected to the solved route and requeue
-    if (finalCandidate.ripsRequired > 0) {
+    if (finalCandidate.ripRequired) {
+      solvedRoute.requiredRip = true
       const routesToRip: Set<SolvedRoute> = new Set()
       for (const candidate of solvedRoute.path) {
         if (
@@ -225,7 +226,18 @@ export class HyperGraphSolver<
     }
 
     this.solvedRoutes.push(solvedRoute)
+    this.routeSolvedHook(solvedRoute)
   }
+
+  /**
+   * OPTIONALLY OVERRIDE THIS
+   *
+   * You can override this to perform actions after a route is solved, e.g.
+   * you may want to detect if a solvedRoute.requiredRip is true, in which
+   * case you might want to execute a "random rip" to avoid loops or check
+   * if we've exceeded a maximum number of rips.
+   */
+  routeSolvedHook(solvedRoute: SolvedRoute) {}
 
   ripSolvedRoute(solvedRoute: SolvedRoute) {
     const assignments: RegionPortAssignment[] = solvedRoute.path
@@ -260,7 +272,7 @@ export class HyperGraphSolver<
         h: 0,
         f: 0,
         hops: 0,
-        ripsRequired: 0,
+        ripRequired: false,
         nextRegion:
           port.region1 === this.currentConnection.startRegion
             ? port.region2
