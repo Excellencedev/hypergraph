@@ -12,14 +12,10 @@ import type {
   RegionId,
   ConnectionId,
   RegionPortAssignment,
+  SolvedRoute,
 } from "./types"
 import { convertSerializedConnectionsToConnections } from "./convertSerializedConnectionsToConnections"
 import { PriorityQueue } from "./PriorityQueue"
-
-export type SolvedRoute = {
-  path: Candidate[]
-  connection: Connection
-}
 
 export class HyperGraphSolver<
   RegionType extends Region = Region,
@@ -36,7 +32,6 @@ export class HyperGraphSolver<
   unprocessedConnections: Connection[]
 
   solvedRoutes: SolvedRoute[] = []
-  assignedPorts: Map<PortId, SolvedRoute> = new Map()
 
   currentConnection: Connection | null = null
   currentEndRegion: Region | null = null
@@ -44,7 +39,6 @@ export class HyperGraphSolver<
   greedyMultiplier = 1.0
   rippingEnabled = false
   ripCost = 0
-  randomRipFraction = 0
 
   lastCandidate: Candidate | null = null
 
@@ -57,11 +51,15 @@ export class HyperGraphSolver<
       greedyMultiplier?: number
       rippingEnabled?: boolean
       ripCost?: number
+      maxRips?: number
       randomRipFraction?: number
     },
   ) {
     super()
     this.graph = convertSerializedHyperGraphToHyperGraph(input.inputGraph)
+    for (const region of this.graph.regions) {
+      region.assignments = []
+    }
     this.connections = convertSerializedConnectionsToConnections(
       input.inputConnections,
       this.graph,
@@ -70,15 +68,7 @@ export class HyperGraphSolver<
     this.unprocessedConnections = [...this.connections]
     this.currentConnection = this.unprocessedConnections.shift()!
     this.candidateQueue = new PriorityQueue<Candidate>()
-    this.candidateQueue.enqueue({
-      port: this.currentConnection.startRegion.ports[0],
-      g: 0,
-      h: 0,
-      f: 0,
-      hops: 0,
-      ripsRequired: 0,
-    })
-    this.currentEndRegion = this.currentConnection.endRegion
+    this.beginNewConnection()
   }
 
   computeH(candidate: CandidateType): number {
@@ -112,7 +102,8 @@ export class HyperGraphSolver<
   /**
    * OVERRIDE THIS
    *
-   * Return the cost of using two ports in the region with consideration of
+   * Return the cost of using two ports in the region, make sure to consider
+   * existing assignments. You may use this to penalize intersections
    */
   computeIncreasedRegionCostIfPortsAreUsed(
     region: RegionType,
@@ -149,7 +140,10 @@ export class HyperGraphSolver<
     const nextCandidatesByRegion: Record<RegionId, Candidate[]> = {}
     for (const port of currentRegion.ports) {
       if (port === currentCandidate.port) continue
-      const assignedRoute = this.assignedPorts.get(port.portId)
+      const requiresRip =
+        port.assignment &&
+        port.assignment.connection.mutuallyConnectedNetworkId !==
+          this.currentConnection!.mutuallyConnectedNetworkId
       const newCandidate: Partial<Candidate> = {
         port,
         hops: currentCandidate.hops + 1,
@@ -158,13 +152,7 @@ export class HyperGraphSolver<
         nextRegion:
           port.region1 === currentRegion ? port.region2 : port.region1,
         lastPort: currentPort,
-        ripsRequired:
-          currentCandidate.ripsRequired +
-          (assignedRoute &&
-          assignedRoute.connection.mutuallyConnectedNetworkId !==
-            this.currentConnection!.mutuallyConnectedNetworkId
-            ? 1
-            : 0),
+        ripsRequired: currentCandidate.ripsRequired + (requiresRip ? 1 : 0),
       }
 
       if (!this.rippingEnabled && newCandidate.ripsRequired! > 0) {
@@ -195,6 +183,79 @@ export class HyperGraphSolver<
     return nextCandidates
   }
 
+  processSolvedRoute(finalCandidate: CandidateType) {
+    const solvedRoute: SolvedRoute = {
+      path: [],
+      connection: this.currentConnection!,
+    }
+
+    let cursorCandidate = finalCandidate
+    while (cursorCandidate.parent) {
+      solvedRoute.path.unshift(cursorCandidate)
+      cursorCandidate = cursorCandidate.parent as CandidateType
+    }
+
+    // Rip any routes that are connected to the solved route and requeue
+    if (finalCandidate.ripsRequired > 0) {
+      const routesToRip: Set<SolvedRoute> = new Set()
+      for (const candidate of solvedRoute.path) {
+        if (
+          candidate.port.assignment &&
+          candidate.port.assignment.connection.mutuallyConnectedNetworkId !==
+            this.currentConnection!.mutuallyConnectedNetworkId
+        ) {
+          routesToRip.add(candidate.port.assignment.solvedRoute)
+        }
+      }
+
+      for (const route of routesToRip) {
+        this.ripSolvedRoute(route)
+      }
+    }
+
+    // Go through each region in the path and add to the assignments
+    for (const region of solvedRoute.path.map(
+      (candidate) => candidate.lastRegion!,
+    )) {
+      region.assignments?.push({
+        regionPort1: finalCandidate.lastPort!,
+        regionPort2: finalCandidate.port,
+        region: region,
+        connection: this.currentConnection!,
+        solvedRoute,
+      })
+    }
+
+    this.solvedRoutes.push(solvedRoute)
+  }
+
+  ripSolvedRoute(solvedRoute: SolvedRoute) {
+    for (const candidate of solvedRoute.path) {
+      candidate.port.ripCount = (candidate.port.ripCount ?? 0) + 1
+      candidate.port.region1.ports = candidate.port.region1.ports.filter(
+        (p) => p !== candidate.port,
+      )
+      candidate.port.assignment = undefined
+    }
+    this.solvedRoutes = this.solvedRoutes.filter((r) => r !== solvedRoute)
+  }
+
+  beginNewConnection() {
+    this.currentConnection = this.unprocessedConnections.shift()!
+    this.currentEndRegion = this.currentConnection.endRegion
+    this.candidateQueue = new PriorityQueue<Candidate>()
+    for (const port of this.currentConnection.startRegion.ports) {
+      this.candidateQueue.enqueue({
+        port,
+        g: 0,
+        h: 0,
+        f: 0,
+        hops: 0,
+        ripsRequired: 0,
+      })
+    }
+  }
+
   override _step() {
     let currentCandidate = this.candidateQueue.dequeue() as CandidateType
     while (
@@ -212,6 +273,8 @@ export class HyperGraphSolver<
     this.visitedPointsForCurrentConnection.add(currentCandidate.port.portId)
 
     if (currentCandidate.nextRegion === this.currentEndRegion) {
+      this.processSolvedRoute(currentCandidate)
+      this.beginNewConnection()
       return
     }
 

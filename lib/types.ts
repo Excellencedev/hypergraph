@@ -29,6 +29,12 @@ export type RegionPortAssignment = {
   regionPort2: RegionPort
   region: Region
   connection: Connection
+  solvedRoute: SolvedRoute
+}
+
+export type SolvedRoute = {
+  path: Candidate[]
+  connection: Connection
 }
 
 export type Candidate<
