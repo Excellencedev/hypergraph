@@ -247,6 +247,9 @@ export class HyperGraphSolver<
    * you may want to detect if a solvedRoute.requiredRip is true, in which
    * case you might want to execute a "random rip" to avoid loops or check
    * if we've exceeded a maximum number of rips.
+   *
+   * You can also use this to shuffle unprocessed routes if a rip occurred, this
+   * can also help avoid loops
    */
   routeSolvedHook(solvedRoute: SolvedRoute) {}
 
@@ -262,6 +265,7 @@ export class HyperGraphSolver<
       port.assignment = undefined
     }
     this.solvedRoutes = this.solvedRoutes.filter((r) => r !== solvedRoute)
+    this.unprocessedConnections.push(solvedRoute.connection)
   }
 
   beginNewConnection() {

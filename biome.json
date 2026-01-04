@@ -31,7 +31,8 @@
         "useLiteralKeys": "off"
       },
       "correctness": {
-        "useExhaustiveDependencies": "off"
+        "useExhaustiveDependencies": "off",
+        "noUnusedFunctionParameters": "off"
       },
       "a11y": {
         "noAccessKey": "off",
