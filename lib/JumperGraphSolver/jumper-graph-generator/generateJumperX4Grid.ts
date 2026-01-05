@@ -8,6 +8,7 @@ export const generateJumperX4Grid = ({
   marginY,
   xChannelPointCount = 1,
   yChannelPointCount = 1,
+  regionsBetweenPads = false,
 }: {
   cols: number
   rows: number
@@ -15,6 +16,7 @@ export const generateJumperX4Grid = ({
   marginY: number
   xChannelPointCount?: number
   yChannelPointCount?: number
+  regionsBetweenPads?: boolean
 }) => {
   const regions: JRegion[] = []
   const ports: JPort[] = []
@@ -62,6 +64,13 @@ export const generateJumperX4Grid = ({
     bottom: JRegion | null
     left: JRegion | null
     right: JRegion | null
+    // Between-pad regions (only when regionsBetweenPads is true)
+    leftBP12: JRegion | null
+    leftBP23: JRegion | null
+    leftBP34: JRegion | null
+    rightBP87: JRegion | null
+    rightBP76: JRegion | null
+    rightBP65: JRegion | null
   }[][] = []
 
   // Helper to create a region
@@ -326,6 +335,91 @@ export const generateJumperX4Grid = ({
         throughjumper4,
       )
 
+      // Between-pad regions (created when regionsBetweenPads is true)
+      // Left side: between P1-P2, P2-P3, P3-P4
+      // Right side: between P8-P7, P7-P6, P6-P5
+      let leftBP12: JRegion | null = null
+      let leftBP23: JRegion | null = null
+      let leftBP34: JRegion | null = null
+      let rightBP87: JRegion | null = null
+      let rightBP76: JRegion | null = null
+      let rightBP65: JRegion | null = null
+
+      if (regionsBetweenPads) {
+        // Left side between-pad regions
+        leftBP12 = createRegion(
+          `${idPrefix}:L-BP12`,
+          {
+            minX: pad1Bounds.minX,
+            maxX: pad1Bounds.maxX,
+            minY: pad2Bounds.maxY,
+            maxY: pad1Bounds.minY,
+          },
+          false,
+        )
+        leftBP23 = createRegion(
+          `${idPrefix}:L-BP23`,
+          {
+            minX: pad2Bounds.minX,
+            maxX: pad2Bounds.maxX,
+            minY: pad3Bounds.maxY,
+            maxY: pad2Bounds.minY,
+          },
+          false,
+        )
+        leftBP34 = createRegion(
+          `${idPrefix}:L-BP34`,
+          {
+            minX: pad3Bounds.minX,
+            maxX: pad3Bounds.maxX,
+            minY: pad4Bounds.maxY,
+            maxY: pad3Bounds.minY,
+          },
+          false,
+        )
+
+        // Right side between-pad regions
+        rightBP87 = createRegion(
+          `${idPrefix}:R-BP87`,
+          {
+            minX: pad8Bounds.minX,
+            maxX: pad8Bounds.maxX,
+            minY: pad7Bounds.maxY,
+            maxY: pad8Bounds.minY,
+          },
+          false,
+        )
+        rightBP76 = createRegion(
+          `${idPrefix}:R-BP76`,
+          {
+            minX: pad7Bounds.minX,
+            maxX: pad7Bounds.maxX,
+            minY: pad6Bounds.maxY,
+            maxY: pad7Bounds.minY,
+          },
+          false,
+        )
+        rightBP65 = createRegion(
+          `${idPrefix}:R-BP65`,
+          {
+            minX: pad6Bounds.minX,
+            maxX: pad6Bounds.maxX,
+            minY: pad5Bounds.maxY,
+            maxY: pad6Bounds.minY,
+          },
+          false,
+        )
+
+        regions.push(
+          leftBP12,
+          leftBP23,
+          leftBP34,
+          rightBP87,
+          rightBP76,
+          rightBP65,
+        )
+      }
+
       // Determine which frame regions to create based on grid position
       const isFirstRow = row === 0
       const isFirstCol = col === 0
@@ -421,6 +515,12 @@ export const generateJumperX4Grid = ({
         bottom,
         left,
         right,
+        leftBP12,
+        leftBP23,
+        leftBP34,
+        rightBP87,
+        rightBP76,
+        rightBP65,
       }
 
       // Create internal ports for this cell
@@ -438,7 +538,28 @@ export const generateJumperX4Grid = ({
         // Top connects to pad1, pad8, and underjumper
         ports.push(createPort(`${idPrefix}:T-P1`, top, pad1))
         ports.push(createPort(`${idPrefix}:T-P8`, top, pad8))
-        ports.push(createPort(`${idPrefix}:T-UJ`, top, underjumper))
+
+        // Underjumper connections to top - multiple ports when regionsBetweenPads
+        if (regionsBetweenPads) {
+          const ujBounds = underjumper.d.bounds
+          const ujWidth = ujBounds.maxX - ujBounds.minX
+          const portSpacing = ujWidth / 5 // 4 ports with equal spacing
+
+          for (let i = 1; i <= 4; i++) {
+            const portX = ujBounds.minX + portSpacing * i
+            const topUJPort: JPort = {
+              portId: `${idPrefix}:T-UJ${i}`,
+              region1: top,
+              region2: underjumper,
+              d: { x: portX, y: ujBounds.maxY },
+            }
+            top.ports.push(topUJPort)
+            underjumper.ports.push(topUJPort)
+            ports.push(topUJPort)
+          }
+        } else {
+          ports.push(createPort(`${idPrefix}:T-UJ`, top, underjumper))
+        }
       }
 
       // Bottom frame connections
@@ -454,7 +575,28 @@ export const generateJumperX4Grid = ({
         // Bottom connects to pad4, pad5, and underjumper
         ports.push(createPort(`${idPrefix}:B-P4`, bottom, pad4))
         ports.push(createPort(`${idPrefix}:B-P5`, bottom, pad5))
-        ports.push(createPort(`${idPrefix}:B-UJ`, bottom, underjumper))
+
+        // Underjumper connections to bottom - multiple ports when regionsBetweenPads
+        if (regionsBetweenPads) {
+          const ujBounds = underjumper.d.bounds
+          const ujWidth = ujBounds.maxX - ujBounds.minX
+          const portSpacing = ujWidth / 5 // 4 ports with equal spacing
+
+          for (let i = 1; i <= 4; i++) {
+            const portX = ujBounds.minX + portSpacing * i
+            const bottomUJPort: JPort = {
+              portId: `${idPrefix}:B-UJ${i}`,
+              region1: bottom,
+              region2: underjumper,
+              d: { x: portX, y: ujBounds.minY },
+            }
+            bottom.ports.push(bottomUJPort)
+            underjumper.ports.push(bottomUJPort)
+            ports.push(bottomUJPort)
+          }
+        } else {
+          ports.push(createPort(`${idPrefix}:B-UJ`, bottom, underjumper))
+        }
       }
 
       // Left/Right frame to pad connections
@@ -468,6 +610,27 @@ export const generateJumperX4Grid = ({
       ports.push(createPort(`${idPrefix}:R-P6`, right, pad6))
       ports.push(createPort(`${idPrefix}:R-P7`, right, pad7))
       ports.push(createPort(`${idPrefix}:R-P8`, right, pad8))
+
+      // Between-pad region ports
+      if (regionsBetweenPads) {
+        // Left side between-pad regions connect to left side and underjumper
+        if (left) {
+          ports.push(createPort(`${idPrefix}:L-BP12`, left, leftBP12!))
+          ports.push(createPort(`${idPrefix}:L-BP23`, left, leftBP23!))
+          ports.push(createPort(`${idPrefix}:L-BP34`, left, leftBP34!))
+        }
+        ports.push(createPort(`${idPrefix}:UJ-LBP12`, leftBP12!, underjumper))
+        ports.push(createPort(`${idPrefix}:UJ-LBP23`, leftBP23!, underjumper))
+        ports.push(createPort(`${idPrefix}:UJ-LBP34`, leftBP34!, underjumper))
+
+        // Right side between-pad regions connect to right side and underjumper
+        ports.push(createPort(`${idPrefix}:R-BP87`, right, rightBP87!))
+        ports.push(createPort(`${idPrefix}:R-BP76`, right, rightBP76!))
+        ports.push(createPort(`${idPrefix}:R-BP65`, right, rightBP65!))
+        ports.push(createPort(`${idPrefix}:UJ-RBP87`, rightBP87!, underjumper))
+        ports.push(createPort(`${idPrefix}:UJ-RBP76`, rightBP76!, underjumper))
+        ports.push(createPort(`${idPrefix}:UJ-RBP65`, rightBP65!, underjumper))
+      }
 
       // Throughjumper1 connections (P1 ↔ P8, top row)
       const tj1LeftPort: JPort = {
@@ -585,6 +748,30 @@ export const generateJumperX4Grid = ({
             pad4,
           ),
         )
+        // A.right connects to B's between-pad regions
+        if (regionsBetweenPads) {
+          ports.push(
+            createPort(
+              `cell_${row}_${col - 1}->cell_${row}_${col}:R-LBP12`,
+              prevCell.right!,
+              leftBP12!,
+            ),
+          )
+          ports.push(
+            createPort(
+              `cell_${row}_${col - 1}->cell_${row}_${col}:R-LBP23`,
+              prevCell.right!,
+              leftBP23!,
+            ),
+          )
+          ports.push(
+            createPort(
+              `cell_${row}_${col - 1}->cell_${row}_${col}:R-LBP34`,
+              prevCell.right!,
+              leftBP34!,
+            ),
+          )
+        }
         // T-T connection between horizontally adjacent cells (first row only)
         if (top && prevCell.top) {
           ports.push(
