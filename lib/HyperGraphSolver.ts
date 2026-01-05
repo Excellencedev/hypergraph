@@ -193,12 +193,12 @@ export class HyperGraphSolver<
       requiredRip: false,
     }
 
-    let cursorCandidate = finalCandidate
+    let cursorCandidate: CandidateType | undefined = finalCandidate
     let anyRipsRequired = false
-    while (cursorCandidate.parent) {
+    while (cursorCandidate) {
       anyRipsRequired ||= !!cursorCandidate.ripRequired
       solvedRoute.path.unshift(cursorCandidate)
-      cursorCandidate = cursorCandidate.parent as CandidateType
+      cursorCandidate = cursorCandidate.parent as CandidateType | undefined
     }
 
     // Rip any routes that are connected to the solved route and requeue
