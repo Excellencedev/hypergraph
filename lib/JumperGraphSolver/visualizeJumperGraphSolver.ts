@@ -30,7 +30,9 @@ export const visualizeJumperGraphSolver = (
 
   // Draw active connection line
   if (solver.currentConnection) {
-    const connectionColor = getConnectionColor(solver.currentConnection.connectionId)
+    const connectionColor = getConnectionColor(
+      solver.currentConnection.connectionId,
+    )
     const startRegion = solver.currentConnection.startRegion as JRegion
     const endRegion = solver.currentConnection.endRegion as JRegion
 
@@ -46,7 +48,7 @@ export const visualizeJumperGraphSolver = (
     graphics.lines.push({
       points: [startCenter, endCenter],
       strokeColor: connectionColor,
-      strokeDash: [10, 5],
+      strokeDash: "10 5",
     })
 
     graphics.points.push({
@@ -64,7 +66,9 @@ export const visualizeJumperGraphSolver = (
 
   // Draw solved routes
   for (const solvedRoute of solver.solvedRoutes) {
-    const connectionColor = getConnectionColor(solvedRoute.connection.connectionId)
+    const connectionColor = getConnectionColor(
+      solvedRoute.connection.connectionId,
+    )
     const pathPoints: { x: number; y: number }[] = []
 
     for (const candidate of solvedRoute.path) {
@@ -82,7 +86,11 @@ export const visualizeJumperGraphSolver = (
 
   // Draw candidates (at most 10)
   const candidates = solver.candidateQueue.peekMany(10)
-  for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
+  for (
+    let candidateIndex = 0;
+    candidateIndex < candidates.length;
+    candidateIndex++
+  ) {
     const candidate = candidates[candidateIndex] as Candidate<JRegion, JPort>
     const port = candidate.port as JPort
     const isNext = candidateIndex === 0
@@ -103,7 +111,9 @@ export const visualizeJumperGraphSolver = (
   // Draw path of next candidate to be processed
   const nextCandidate = candidates[0] as Candidate<JRegion, JPort> | undefined
   if (nextCandidate && solver.currentConnection) {
-    const connectionColor = getConnectionColor(solver.currentConnection.connectionId)
+    const connectionColor = getConnectionColor(
+      solver.currentConnection.connectionId,
+    )
     const activePath: { x: number; y: number }[] = []
     let cursor: Candidate | undefined = nextCandidate
 
@@ -117,7 +127,6 @@ export const visualizeJumperGraphSolver = (
       graphics.lines.push({
         points: activePath,
         strokeColor: connectionColor,
-        strokeDash: [5, 3],
       })
     }
   }
