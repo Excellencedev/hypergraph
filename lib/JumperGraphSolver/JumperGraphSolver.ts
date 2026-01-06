@@ -17,12 +17,12 @@ import { computeCrossingAssignments } from "./computeCrossingAssignments"
 export class JumperGraphSolver extends HyperGraphSolver<JRegion, JPort> {
   UNIT_OF_COST = "distance"
 
-  portUsagePenalty = 1
-  portUsagePenaltySq = 0
+  portUsagePenalty = 0.3
+  portUsagePenaltySq = 0.1
   crossingPenalty = 6
-  crossingPenaltySq = 0
+  crossingPenaltySq = 0.1
   override ripCost = 40
-  baseMaxIterations = 400
+  baseMaxIterations = 4000
   additionalMaxIterationsPerConnection = 200
 
   constructor(input: {
@@ -35,7 +35,7 @@ export class JumperGraphSolver extends HyperGraphSolver<JRegion, JPort> {
     additionalMaxIterationsPerConnection?: number
   }) {
     super({
-      greedyMultiplier: 1.2,
+      greedyMultiplier: 0.45,
       rippingEnabled: true,
       ...input,
     })
