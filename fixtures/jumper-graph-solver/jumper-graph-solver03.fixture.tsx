@@ -13,12 +13,12 @@ export default () => {
   const baseGraph = generateJumperX4Grid({
     cols,
     rows,
-    marginX: 0.5,
-    marginY: 0.5,
+    marginX: 1.2,
+    marginY: 1.2,
     outerPaddingX: 2,
     outerPaddingY: 2,
-    innerColChannelPointCount: 1,
-    innerRowChannelPointCount: 1,
+    innerColChannelPointCount: 3,
+    innerRowChannelPointCount: 3,
     regionsBetweenPads: true,
   })
 

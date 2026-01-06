@@ -22,7 +22,7 @@ export class JumperGraphSolver extends HyperGraphSolver<JRegion, JPort> {
     inputConnections: (Connection | SerializedConnection)[]
   }) {
     super({ ...input, greedyMultiplier: 1.2, rippingEnabled: true, ripCost: 1 })
-    this.MAX_ITERATIONS = 10000
+    this.MAX_ITERATIONS = 100000
   }
 
   override estimateCostToEnd(port: JPort): number {
