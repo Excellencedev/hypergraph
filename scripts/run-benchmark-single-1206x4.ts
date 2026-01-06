@@ -3,26 +3,28 @@ import { createProblemFromBaseGraph } from "../lib/JumperGraphSolver/jumper-grap
 import { JumperGraphSolver } from "../lib/JumperGraphSolver/JumperGraphSolver"
 
 const SAMPLES_PER_CONNECTION_COUNT = 100
-const MIN_CONNECTIONS = 2
-const MAX_CONNECTIONS = 20
+const MIN_CROSSINGS = 2
+const MAX_CROSSINGS = 10
 const MAX_ITERATIONS = 10_000
 
 const baseGraph = generateJumperX4Grid({
   cols: 1,
   rows: 1,
-  marginX: 0.5,
-  marginY: 0.5,
+  marginX: 1.2,
+  marginY: 1.2,
   outerPaddingX: 2,
   outerPaddingY: 2,
-  innerColChannelPointCount: 4,
-  innerRowChannelPointCount: 4,
+  innerColChannelPointCount: 3,
+  innerRowChannelPointCount: 3,
+  outerChannelXPointCount: 5,
+  outerChannelYPointCount: 5,
   regionsBetweenPads: true,
 })
 
 console.log("Benchmark: Single 1206x4 Jumper Grid Solver")
 console.log("=".repeat(50))
 console.log(
-  `Testing ${MIN_CONNECTIONS}-${MAX_CONNECTIONS} connections with ${SAMPLES_PER_CONNECTION_COUNT} samples each\n`,
+  `Testing ${MIN_CROSSINGS}-${MAX_CROSSINGS} connections with ${SAMPLES_PER_CONNECTION_COUNT} samples each\n`,
 )
 
 const results: {
@@ -32,9 +34,9 @@ const results: {
 }[] = []
 
 for (
-  let numConnections = MIN_CONNECTIONS;
-  numConnections <= MAX_CONNECTIONS;
-  numConnections++
+  let numCrossings = MIN_CROSSINGS;
+  numCrossings <= MAX_CROSSINGS;
+  numCrossings++
 ) {
   let successes = 0
 
@@ -43,11 +45,11 @@ for (
     sampleIndex < SAMPLES_PER_CONNECTION_COUNT;
     sampleIndex++
   ) {
-    const randomSeed = 1000 * numConnections + sampleIndex
+    const randomSeed = 1000 * numCrossings + sampleIndex
 
     const graphWithConnections = createProblemFromBaseGraph({
       baseGraph,
-      numCrossings: numConnections,
+      numCrossings: numCrossings,
       randomSeed,
     })
 
@@ -76,10 +78,10 @@ for (
   }
 
   const successRate = (successes / SAMPLES_PER_CONNECTION_COUNT) * 100
-  results.push({ numConnections, successRate, successes })
+  results.push({ numConnections: numCrossings, successRate, successes })
 
   console.log(
-    `Connections: ${numConnections.toString().padStart(2)} | ` +
+    `Connections: ${numCrossings.toString().padStart(2)} | ` +
       `Success: ${successes.toString().padStart(3)}/${SAMPLES_PER_CONNECTION_COUNT} | ` +
       `Rate: ${successRate.toFixed(1).padStart(5)}%`,
   )
