@@ -9,8 +9,8 @@ test("jumper-graph-generation08 - 1206x4 grid 3x3", () => {
     rows: 3,
     marginX: 2,
     marginY: 1,
-    xChannelPointCount: 3,
-    yChannelPointCount: 2,
+    innerColChannelPointCount: 3,
+    innerRowChannelPointCount: 2,
   })
   expect(
     getSvgFromGraphicsObject(visualizeJumperGraph(jumperX4Grid)),

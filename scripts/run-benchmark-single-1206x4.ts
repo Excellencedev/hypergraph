@@ -12,10 +12,10 @@ const baseGraph = generateJumperX4Grid({
   rows: 1,
   marginX: 0.5,
   marginY: 0.5,
-  outerPaddingX: 0.8,
-  outerPaddingY: 0.8,
-  xChannelPointCount: 4,
-  yChannelPointCount: 4,
+  outerPaddingX: 2,
+  outerPaddingY: 2,
+  innerColChannelPointCount: 4,
+  innerRowChannelPointCount: 4,
   regionsBetweenPads: true,
 })
 

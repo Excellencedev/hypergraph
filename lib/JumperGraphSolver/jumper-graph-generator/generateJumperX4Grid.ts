@@ -7,31 +7,31 @@ export const generateJumperX4Grid = ({
   rows,
   marginX,
   marginY,
-  xChannelPointCount = 1,
-  yChannelPointCount = 1,
+  innerColChannelPointCount = 1,
+  innerRowChannelPointCount = 1,
   regionsBetweenPads = false,
   outerPaddingX = 0.5,
   outerPaddingY = 0.5,
-  outerChannelXPoints,
-  outerChannelYPoints,
+  outerChannelXPointCount,
+  outerChannelYPointCount,
 }: {
   cols: number
   rows: number
   marginX: number
   marginY: number
-  xChannelPointCount?: number
-  yChannelPointCount?: number
+  innerColChannelPointCount?: number
+  innerRowChannelPointCount?: number
   regionsBetweenPads?: boolean
   outerPaddingX?: number
   outerPaddingY?: number
-  outerChannelXPoints?: number
-  outerChannelYPoints?: number
+  outerChannelXPointCount?: number
+  outerChannelYPointCount?: number
 }) => {
   // Calculate outer channel points: use provided value or derive from outer padding
   const effectiveOuterChannelXPoints =
-    outerChannelXPoints ?? Math.max(1, Math.floor(outerPaddingX / 0.4))
+    outerChannelXPointCount ?? Math.max(1, Math.floor(outerPaddingX / 0.4))
   const effectiveOuterChannelYPoints =
-    outerChannelYPoints ?? Math.max(1, Math.floor(outerPaddingY / 0.4))
+    outerChannelYPointCount ?? Math.max(1, Math.floor(outerPaddingY / 0.4))
   const regions: JRegion[] = []
   const ports: JPort[] = []
 
@@ -99,7 +99,11 @@ export const generateJumperX4Grid = ({
   })
 
   // Helper to create a port at the boundary between two regions
-  const createPort = (id: string, region1: JRegion, region2: JRegion): JPort => {
+  const createPort = (
+    id: string,
+    region1: JRegion,
+    region2: JRegion,
+  ): JPort => {
     const b1 = region1.d.bounds
     const b2 = region2.d.bounds
 
@@ -812,7 +816,7 @@ export const generateJumperX4Grid = ({
               `cell_${row}_${col - 1}->cell_${row}_${col}:T-T`,
               prevCell.top,
               top,
-              yChannelPointCount,
+              innerRowChannelPointCount,
             ),
           )
         }
@@ -823,7 +827,7 @@ export const generateJumperX4Grid = ({
               `cell_${row}_${col - 1}->cell_${row}_${col}:B-B`,
               prevCell.bottom,
               bottom,
-              yChannelPointCount,
+              innerRowChannelPointCount,
             ),
           )
         }

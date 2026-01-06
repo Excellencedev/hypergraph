@@ -17,6 +17,8 @@ export default () => {
     marginY: 0.5,
     outerPaddingX: 2,
     outerPaddingY: 2,
+    innerColChannelPointCount: 1,
+    innerRowChannelPointCount: 1,
     regionsBetweenPads: true,
   })
 

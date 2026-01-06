@@ -7,8 +7,8 @@ const jumperX4Grid = generateJumperX4Grid({
   rows: 3,
   marginX: 2,
   marginY: 1,
-  xChannelPointCount: 3,
-  yChannelPointCount: 2,
+  innerColChannelPointCount: 3,
+  innerRowChannelPointCount: 2,
 })
 
 const graphics = visualizeJumperGraph(jumperX4Grid)
