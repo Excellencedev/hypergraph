@@ -6,14 +6,15 @@ export const convertSerializedConnectionsToConnections = (
 ): Connection[] => {
   const connections: Connection[] = []
   for (const inputConn of inputConnections) {
-    if ("startPointId" in inputConn) {
+    if ("startRegionId" in inputConn) {
       connections.push({
         connectionId: inputConn.connectionId,
-        startRegion: graph.ports.find(
-          (point) => point.portId === inputConn.startPortId,
+        mutuallyConnectedNetworkId: inputConn.connectionId,
+        startRegion: graph.regions.find(
+          (region) => region.regionId === inputConn.startRegionId,
         )!,
-        endPort: graph.ports.find(
-          (point) => point.portId === inputConn.endPointId,
+        endRegion: graph.regions.find(
+          (region) => region.regionId === inputConn.endRegionId,
         )!,
       })
     } else {

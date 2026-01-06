@@ -4,6 +4,6 @@ import inputProblem from "./basics01-input.json"
 
 export default () => (
   <GenericSolverDebugger
-    createSolver={() => new JumperGraphSolver(inputProblem)}
+    createSolver={() => new JumperGraphSolver(inputProblem as any)}
   />
 )

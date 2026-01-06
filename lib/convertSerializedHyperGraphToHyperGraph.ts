@@ -25,9 +25,11 @@ export const convertSerializedHyperGraphToHyperGraph = (
 
   // First pass: create regions without ports
   for (const region of inputGraph.regions) {
+    const { assignments: _, ...regionWithoutAssignments } = region as any
     regionMap.set(region.regionId, {
-      ...region,
+      ...regionWithoutAssignments,
       ports: [],
+      assignments: undefined,
     })
   }
 
