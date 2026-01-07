@@ -4,3 +4,4 @@ export * from "./JumperGraphSolver/jumper-graph-generator/createGraphWithConnect
 export * from "./JumperGraphSolver/JumperGraphSolver"
 export * from "./HyperGraphSolver"
 export * from "./JumperGraphSolver/geometry/applyTransformToGraph"
+export * from "./types"
