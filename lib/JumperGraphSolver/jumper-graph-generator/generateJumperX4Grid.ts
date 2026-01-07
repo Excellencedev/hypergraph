@@ -13,12 +13,13 @@ export const generateJumperX4Grid = ({
   innerColChannelPointCount = 1,
   innerRowChannelPointCount = 1,
   regionsBetweenPads = false,
-  outerPaddingX = 0.5,
-  outerPaddingY = 0.5,
+  outerPaddingX: outerPaddingXParam = 0.5,
+  outerPaddingY: outerPaddingYParam = 0.5,
   outerChannelXPointCount,
   outerChannelYPointCount,
   orientation = "vertical",
   center,
+  bounds,
 }: {
   cols: number
   rows: number
@@ -33,12 +34,8 @@ export const generateJumperX4Grid = ({
   outerChannelYPointCount?: number
   orientation?: "vertical" | "horizontal"
   center?: { x: number; y: number }
+  bounds?: { minX: number; maxX: number; minY: number; maxY: number }
 }): JumperGraph => {
-  // Calculate outer channel points: use provided value or derive from outer padding
-  const effectiveOuterChannelXPoints =
-    outerChannelXPointCount ?? Math.max(1, Math.floor(outerPaddingX / 0.4))
-  const effectiveOuterChannelYPoints =
-    outerChannelYPointCount ?? Math.max(1, Math.floor(outerPaddingY / 0.4))
   const regions: JRegion[] = []
   const ports: JPort[] = []
 
@@ -64,6 +61,25 @@ export const generateJumperX4Grid = ({
   // Vertical spacing: from one cell center to next cell center
   const cellHeight = row1CenterY - row4CenterY + padHeight // total height of pads region
   const verticalSpacing = cellHeight + marginY
+
+  // Calculate outer padding from bounds if specified
+  let outerPaddingX = outerPaddingXParam
+  let outerPaddingY = outerPaddingYParam
+  if (bounds) {
+    // Content dimensions (without outer padding)
+    const contentWidth = cols * cellWidth + (cols - 1) * marginX
+    const contentHeight = rows * cellHeight + (rows - 1) * marginY
+    const boundsWidth = bounds.maxX - bounds.minX
+    const boundsHeight = bounds.maxY - bounds.minY
+    outerPaddingX = (boundsWidth - contentWidth) / 2
+    outerPaddingY = (boundsHeight - contentHeight) / 2
+  }
+
+  // Calculate outer channel points: use provided value or derive from outer padding
+  const effectiveOuterChannelXPoints =
+    outerChannelXPointCount ?? Math.max(1, Math.floor(outerPaddingX / 0.4))
+  const effectiveOuterChannelYPoints =
+    outerChannelYPointCount ?? Math.max(1, Math.floor(outerPaddingY / 0.4))
 
   // Store cells for later port connections
   const cells: {
@@ -566,7 +582,9 @@ export const generateJumperX4Grid = ({
             `${idPrefix}:T-R`,
             top,
             right,
-            isLastCol ? effectiveOuterChannelXPoints : innerColChannelPointCount,
+            isLastCol
+              ? effectiveOuterChannelXPoints
+              : innerColChannelPointCount,
           ),
         )
         // Top connects to pad1, pad8, and underjumper
@@ -613,7 +631,9 @@ export const generateJumperX4Grid = ({
             `${idPrefix}:B-R`,
             bottom,
             right,
-            isLastCol ? effectiveOuterChannelXPoints : innerColChannelPointCount,
+            isLastCol
+              ? effectiveOuterChannelXPoints
+              : innerColChannelPointCount,
           ),
         )
         // Bottom connects to pad4, pad5, and underjumper
@@ -817,24 +837,28 @@ export const generateJumperX4Grid = ({
           )
         }
         // T-T connection between horizontally adjacent cells (first row only)
+        // This is a vertical boundary, so use Y point count for outer edge
         if (top && prevCell.top) {
           ports.push(
             ...createMultiplePorts(
               `cell_${row}_${col - 1}->cell_${row}_${col}:T-T`,
               prevCell.top,
               top,
-              innerRowChannelPointCount,
+              effectiveOuterChannelYPoints,
             ),
           )
         }
         // B-B connection between horizontally adjacent cells
+        // This is a vertical boundary; use Y points for outer edge (last row), inner points otherwise
         if (bottom && prevCell.bottom) {
           ports.push(
             ...createMultiplePorts(
               `cell_${row}_${col - 1}->cell_${row}_${col}:B-B`,
               prevCell.bottom,
               bottom,
-              innerRowChannelPointCount,
+              isLastRow
+                ? effectiveOuterChannelYPoints
+                : innerRowChannelPointCount,
             ),
           )
         }
@@ -901,7 +925,9 @@ export const generateJumperX4Grid = ({
             `cell_${row - 1}_${col}->cell_${row}_${col}:B-R`,
             aboveCell.bottom!,
             right,
-            isLastCol ? effectiveOuterChannelXPoints : innerColChannelPointCount,
+            isLastCol
+              ? effectiveOuterChannelXPoints
+              : innerColChannelPointCount,
           ),
         )
       }
@@ -910,11 +936,12 @@ export const generateJumperX4Grid = ({
 
   let graph: JumperGraph = { regions, ports }
 
-  // Apply transformations based on orientation and center
+  // Apply transformations based on orientation, center, and bounds
   const needsRotation = orientation === "horizontal"
   const needsCentering = center !== undefined
+  const needsBoundsTransform = bounds !== undefined
 
-  if (needsRotation || needsCentering) {
+  if (needsRotation || needsCentering || needsBoundsTransform) {
     // Calculate current graph bounds and center
     const currentBounds = calculateGraphBounds(graph.regions)
     const currentCenter = computeBoundsCenter(currentBounds)
@@ -930,8 +957,16 @@ export const generateJumperX4Grid = ({
       matrices.push(rotate(-Math.PI / 2))
     }
 
-    // Translate to target center (or back to current center if no center specified)
-    const targetCenter = center ?? currentCenter
+    // Translate to target center
+    // Priority: explicit center > bounds center > current center
+    let targetCenter: { x: number; y: number }
+    if (center) {
+      targetCenter = center
+    } else if (bounds) {
+      targetCenter = computeBoundsCenter(bounds)
+    } else {
+      targetCenter = currentCenter
+    }
     matrices.push(translate(targetCenter.x, targetCenter.y))
 
     const matrix = compose(...matrices)
