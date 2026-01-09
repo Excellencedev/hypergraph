@@ -62,15 +62,75 @@ const isValidPoint = (
   return true
 }
 
+type Side = "top" | "right" | "bottom" | "left"
+
+/**
+ * Generates a random point on a specific side of the bounds
+ */
+const getPointOnSide = (
+  bounds: { minX: number; maxX: number; minY: number; maxY: number },
+  side: Side,
+  t: number, // 0-1 position along the side
+): { x: number; y: number } => {
+  const width = bounds.maxX - bounds.minX
+  const height = bounds.maxY - bounds.minY
+
+  switch (side) {
+    case "top":
+      return { x: bounds.minX + t * width, y: bounds.maxY }
+    case "right":
+      return { x: bounds.maxX, y: bounds.maxY - t * height }
+    case "bottom":
+      return { x: bounds.maxX - t * width, y: bounds.minY }
+    case "left":
+      return { x: bounds.minX, y: bounds.minY + t * height }
+  }
+}
+
+/**
+ * Returns the length of a side
+ */
+const getSideLength = (
+  bounds: { minX: number; maxX: number; minY: number; maxY: number },
+  side: Side,
+): number => {
+  const width = bounds.maxX - bounds.minX
+  const height = bounds.maxY - bounds.minY
+  return side === "top" || side === "bottom" ? width : height
+}
+
 /**
  * Generates a random point on the perimeter of the given bounds
+ * If allowedSides is provided, only generates points on those sides
  */
 const getRandomPerimeterPoint = (
   bounds: { minX: number; maxX: number; minY: number; maxY: number },
   random: () => number,
+  allowedSides?: Side[],
 ): { x: number; y: number } => {
   const width = bounds.maxX - bounds.minX
   const height = bounds.maxY - bounds.minY
+
+  if (allowedSides && allowedSides.length > 0) {
+    // Calculate total length of allowed sides
+    const sideLengths = allowedSides.map((side) => getSideLength(bounds, side))
+    const totalLength = sideLengths.reduce((sum, len) => sum + len, 0)
+
+    // Pick a random position along the combined length
+    let pos = random() * totalLength
+
+    for (let i = 0; i < allowedSides.length; i++) {
+      if (pos < sideLengths[i]) {
+        const t = pos / sideLengths[i]
+        return getPointOnSide(bounds, allowedSides[i], t)
+      }
+      pos -= sideLengths[i]
+    }
+
+    // Fallback to last side (shouldn't happen due to floating point)
+    return getPointOnSide(bounds, allowedSides[allowedSides.length - 1], random())
+  }
+
   const perimeter = 2 * width + 2 * height
 
   // Pick a random position along the perimeter
@@ -92,6 +152,20 @@ const getRandomPerimeterPoint = (
   return { x: bounds.minX, y: bounds.minY + (pos - 2 * width - height) }
 }
 
+const ALL_SIDES: Side[] = ["top", "right", "bottom", "left"]
+
+/**
+ * Picks two random different sides
+ */
+const pickTwoRandomSides = (random: () => number): [Side, Side] => {
+  const firstIndex = Math.floor(random() * 4)
+  let secondIndex = Math.floor(random() * 3)
+  if (secondIndex >= firstIndex) {
+    secondIndex++
+  }
+  return [ALL_SIDES[firstIndex], ALL_SIDES[secondIndex]]
+}
+
 /**
  * Generates a connection ID from an index (0 -> "A", 1 -> "B", etc.)
  */
@@ -103,6 +177,7 @@ export type CreateProblemFromBaseGraphParams = {
   baseGraph: JumperGraph
   numCrossings: number
   randomSeed: number
+  twoSided?: boolean
 }
 
 /**
@@ -114,9 +189,13 @@ export const createProblemFromBaseGraph = ({
   baseGraph,
   numCrossings,
   randomSeed,
+  twoSided = false,
 }: CreateProblemFromBaseGraphParams): JumperGraphWithConnections => {
   const random = createSeededRandom(randomSeed)
   const graphBounds = calculateGraphBounds(baseGraph.regions)
+
+  // If twoSided, pick two random sides to use for all points in this problem
+  const allowedSides = twoSided ? pickTwoRandomSides(random) : undefined
 
   // Start with minimum connections needed for the desired crossings
   // For n connections, max crossings is n*(n-1)/2, so we need at least
@@ -136,7 +215,7 @@ export const createProblemFromBaseGraph = ({
       // Try to find a valid start point
       let start: { x: number; y: number } | null = null
       for (let tryCount = 0; tryCount < 100; tryCount++) {
-        const candidate = getRandomPerimeterPoint(graphBounds, random)
+        const candidate = getRandomPerimeterPoint(graphBounds, random, allowedSides)
         if (isValidPoint(candidate, allPoints)) {
           start = candidate
           break
@@ -151,7 +230,7 @@ export const createProblemFromBaseGraph = ({
       // Try to find a valid end point
       let end: { x: number; y: number } | null = null
       for (let tryCount = 0; tryCount < 100; tryCount++) {
-        const candidate = getRandomPerimeterPoint(graphBounds, random)
+        const candidate = getRandomPerimeterPoint(graphBounds, random, allowedSides)
         if (isValidPoint(candidate, allPoints)) {
           end = candidate
           break
