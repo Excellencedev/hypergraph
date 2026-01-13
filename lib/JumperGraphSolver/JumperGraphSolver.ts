@@ -13,18 +13,21 @@ import { visualizeJumperGraphSolver } from "./visualizeJumperGraphSolver"
 import { distance } from "@tscircuit/math-utils"
 import { computeDifferentNetCrossings } from "./computeDifferentNetCrossings"
 import { computeCrossingAssignments } from "./computeCrossingAssignments"
+import { countInputConnectionCrossings } from "./countInputConnectionCrossings"
 
 export const JUMPER_GRAPH_SOLVER_DEFAULTS = {
-  portUsagePenalty: 0.06393718451067248,
-  portUsagePenaltySq: 0.06194817180037216,
-  crossingPenalty: 6.0761550028071145,
-  crossingPenaltySq: 0.1315528159128946,
-  ripCost: 40.00702225250195,
-  greedyMultiplier: 0.4316469416682083,
+  portUsagePenalty: 0.034685181009478865,
+  // portUsagePenaltySq: 0.06194817180037216,
+  portUsagePenaltySq: 0,
+  crossingPenalty: 4.072520483177124,
+  crossingPenaltySq: 0,
+  // crossingPenaltySq: 0.1315528159128946,
+  ripCost: 35.38577539020022,
+  greedyMultiplier: 0.5518001238069296,
 }
 
 export class JumperGraphSolver extends HyperGraphSolver<JRegion, JPort> {
-  UNIT_OF_COST = "distance"
+  UNIT_OF_COST = "hops"
 
   portUsagePenalty = JUMPER_GRAPH_SOLVER_DEFAULTS.portUsagePenalty
   portUsagePenaltySq = JUMPER_GRAPH_SOLVER_DEFAULTS.portUsagePenaltySq
@@ -32,7 +35,8 @@ export class JumperGraphSolver extends HyperGraphSolver<JRegion, JPort> {
   crossingPenaltySq = JUMPER_GRAPH_SOLVER_DEFAULTS.crossingPenaltySq
   override ripCost = JUMPER_GRAPH_SOLVER_DEFAULTS.ripCost
   baseMaxIterations = 4000
-  additionalMaxIterationsPerConnection = 4000
+  additionalMaxIterationsPerConnection = 2000
+  additionalMaxIterationsPerCrossing = 2000
 
   constructor(input: {
     inputGraph: HyperGraph | SerializedHyperGraph
@@ -56,9 +60,16 @@ export class JumperGraphSolver extends HyperGraphSolver<JRegion, JPort> {
       input.additionalMaxIterationsPerConnection ??
       this.additionalMaxIterationsPerConnection
 
+    const crossings = countInputConnectionCrossings(
+      this.graph,
+      input.inputConnections,
+    )
+
     this.MAX_ITERATIONS =
       this.baseMaxIterations +
-      input.inputConnections.length * this.additionalMaxIterationsPerConnection
+      input.inputConnections.length *
+        this.additionalMaxIterationsPerConnection +
+      crossings * this.additionalMaxIterationsPerCrossing
 
     this.populateDistanceToEndMaps()
   }
