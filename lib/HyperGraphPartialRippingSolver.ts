@@ -1,5 +1,10 @@
 import type { Connection, HyperGraph, SerializedConnection } from "./types"
-import type { Candidate, Region, RegionPort, SerializedHyperGraph } from "./types"
+import type {
+  Candidate,
+  Region,
+  RegionPort,
+  SerializedHyperGraph,
+} from "./types"
 import { HyperGraphSolver } from "./HyperGraphSolver"
 
 export type HyperGraphPartialRippingInput = {

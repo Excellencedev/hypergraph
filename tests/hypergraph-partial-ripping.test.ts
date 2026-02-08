@@ -154,8 +154,7 @@ const renderSvg = (results: {
     { label: "thresholdTwo", items: results.thresholdTwo },
   ]
 
-  const height =
-    topPadding + rows.length * rowHeight + (rows.length - 1) * gap
+  const height = topPadding + rows.length * rowHeight + (rows.length - 1) * gap
 
   let y = topPadding
   const bars = rows
@@ -193,10 +192,12 @@ test("hypergraph partial ripping defers ripping until threshold", () => {
   }
 
   const svg = renderSvg({
-    thresholdZero: results.thresholdZero.map(({ connectionId, requiredRip }) => ({
-      connectionId,
-      requiredRip,
-    })),
+    thresholdZero: results.thresholdZero.map(
+      ({ connectionId, requiredRip }) => ({
+        connectionId,
+        requiredRip,
+      }),
+    ),
     thresholdTwo: results.thresholdTwo.map(({ connectionId, requiredRip }) => ({
       connectionId,
       requiredRip,
