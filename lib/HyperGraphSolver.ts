@@ -147,6 +147,16 @@ export class HyperGraphSolver<
     return []
   }
 
+  /**
+   * OPTIONALLY OVERRIDE THIS
+   *
+   * Return true if a candidate that requires ripping should be considered.
+   * This allows partial ripping strategies to gate when ripping is allowed.
+   */
+  shouldAllowRip(_candidate: CandidateType): boolean {
+    return true
+  }
+
   computeG(candidate: CandidateType): number {
     return (
       candidate.parent!.g +
@@ -192,6 +202,13 @@ export class HyperGraphSolver<
       }
 
       if (!this.rippingEnabled && newCandidate.ripRequired) {
+        continue
+      }
+      if (
+        this.rippingEnabled &&
+        newCandidate.ripRequired &&
+        !this.shouldAllowRip(newCandidate as CandidateType)
+      ) {
         continue
       }
 
