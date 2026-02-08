@@ -138,11 +138,53 @@ const solveWithThreshold = (ripCostThreshold: number) => {
   }))
 }
 
-const escapeSvgText = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
+const renderSvg = (results: {
+  thresholdZero: Array<{ connectionId: string; requiredRip: boolean }>
+  thresholdTwo: Array<{ connectionId: string; requiredRip: boolean }>
+}) => {
+  const rowHeight = 40
+  const gap = 10
+  const leftPadding = 20
+  const topPadding = 20
+  const barWidth = 260
+  const barHeight = 18
+
+  const rows = [
+    { label: "thresholdZero", items: results.thresholdZero },
+    { label: "thresholdTwo", items: results.thresholdTwo },
+  ]
+
+  const height =
+    topPadding + rows.length * rowHeight + (rows.length - 1) * gap
+
+  let y = topPadding
+  const bars = rows
+    .map((row) => {
+      const rowY = y
+      y += rowHeight + gap
+      const label = `<text x="${leftPadding}" y="${
+        rowY + 14
+      }" font-family="monospace" font-size="12">${row.label}</text>`
+      const rects = row.items
+        .map((item, index) => {
+          const color = item.requiredRip ? "#e74c3c" : "#2ecc71"
+          const rectX = leftPadding + 120 + index * (barWidth + 12)
+          const rectY = rowY
+          const rect = `<rect x="${rectX}" y="${rectY}" width="${barWidth}" height="${barHeight}" rx="4" fill="${color}" />`
+          const text = `<text x="${rectX + 8}" y="${
+            rectY + 13
+          }" font-family="monospace" font-size="11" fill="#ffffff">${
+            item.connectionId
+          }${item.requiredRip ? " rip" : " ok"}</text>`
+          return `${rect}${text}`
+        })
+        .join("")
+      return `${label}${rects}`
+    })
+    .join("")
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="${height}">${bars}</svg>`
+}
 
 test("hypergraph partial ripping defers ripping until threshold", () => {
   const results = {
@@ -150,8 +192,16 @@ test("hypergraph partial ripping defers ripping until threshold", () => {
     thresholdTwo: solveWithThreshold(2),
   }
 
-  const payload = escapeSvgText(JSON.stringify(results, null, 2))
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><text x="10" y="20" font-family="monospace" font-size="12">${payload}</text></svg>`
+  const svg = renderSvg({
+    thresholdZero: results.thresholdZero.map(({ connectionId, requiredRip }) => ({
+      connectionId,
+      requiredRip,
+    })),
+    thresholdTwo: results.thresholdTwo.map(({ connectionId, requiredRip }) => ({
+      connectionId,
+      requiredRip,
+    })),
+  })
 
   expect(svg).toMatchSvgSnapshot(import.meta.path)
 })
