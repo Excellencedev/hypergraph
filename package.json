@@ -29,6 +29,8 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@tscircuit/solver-utils": "^0.0.14"
+    "@tscircuit/solver-utils": "^0.0.14",
+    "dotenv": "^8.2.0",
+    "node-fetch": "^3.3.2"
   }
 }
