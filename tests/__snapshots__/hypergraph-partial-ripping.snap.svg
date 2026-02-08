@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><text x="10" y="20" font-family="monospace" font-size="12">{
+  "thresholdZero": [
+    {
+      "connectionId": "conn-2",
+      "requiredRip": true,
+      "portIds": [
+        "P1",
+        "P2"
+      ]
+    },
+    {
+      "connectionId": "conn-1",
+      "requiredRip": false,
+      "portIds": [
+        "P6",
+        "P7",
+        "P8"
+      ]
+    }
+  ],
+  "thresholdTwo": [
+    {
+      "connectionId": "conn-1",
+      "requiredRip": false,
+      "portIds": [
+        "P1",
+        "P2"
+      ]
+    },
+    {
+      "connectionId": "conn-2",
+      "requiredRip": false,
+      "portIds": [
+        "P6",
+        "P7",
+        "P8"
+      ]
+    }
+  ]
+}</text></svg>
